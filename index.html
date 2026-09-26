@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi Modelo de Deep Learning - Teachable Machine</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .model-input-section {
+      background: #eff6ff;
+      border: 1px dashed #93c5fd;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 0.4rem;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.65rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .status {
+      text-align: center;
+      font-size: 0.9rem;
+      margin: 1rem 0;
+      color: var(--text-muted);
+      min-height: 1.5rem;
+    }
+
+    #webcam-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto 1.5rem auto;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      background-color: #0f172a;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 240px;
+    }
+
+    #webcam-container canvas {
+      width: 100% !important;
+      height: auto !important;
+      display: block;
+      border-radius: 0.75rem;
+    }
+
+    .predictions-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+    }
+
+    .predictions-box h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+
+    .prediction-item {
+      margin-bottom: 0.75rem;
+    }
+
+    .prediction-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+    }
+
+    .progress-bar-bg {
+      background: #e2e8f0;
+      border-radius: 9999px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      background: var(--primary);
+      height: 100%;
+      width: 0%;
+      border-radius: 9999px;
+      transition: width 0.15s ease-out, background-color 0.2s;
+    }
+
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+  </style>
+
+  <!-- TensorFlow.js y Teachable Machine Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🧠 Clasificador con Deep Learning</h1>
+      <p class="subtitle">Desplegado con GitHub Pages & Google Teachable Machine</p>
+    </header>
+
+    <!-- Enlace a tu modelo -->
+    <div class="model-input-section">
+      <label for="model-url">URL de tu Modelo Teachable Machine:</label>
+      <div class="input-group">
+        <!-- Reemplaza el 'value' por el enlace de tu modelo cuando lo exportes -->
+        <input 
+          type="text" 
+          id="model-url" 
+          placeholder="https://teachablemachine.withgoogle.com/models/TU_ID_AQUI/"
+          value="" 
+        />
+        <button id="start-btn" onclick="iniciarCamara()">Iniciar</button>
+      </div>
+      <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 0.4rem;">
+        Pega el enlace que obtienes en Teachable Machine al dar clic en <strong>Export Model &gt; Upload my model</strong>.
+      </small>
+    </div>
+
+    <div id="status" class="status">Presiona "Iniciar" para activar la cámara web y clasificar.</div>
+
+    <!-- Cámara web -->
+    <div id="webcam-wrapper">
+      <div id="webcam-container"></div>
+    </div>
+
+    <!-- Resultados / Probabilidades -->
+    <div class="predictions-box">
+      <h2>Predicciones en tiempo real</h2>
+      <div id="label-container">
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Las clases y porcentajes aparecerán aquí una vez iniciado.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Proyecto creado para <strong>Herramientas de Desarrollo</strong> | UTP
+  </footer>
+
+  <script type="text/javascript">
+    let model, webcam, labelContainer, maxPredictions;
+    let isRunning = false;
+
+    async function iniciarCamara() {
+      const urlInput = document.getElementById("model-url").value.trim();
+      const statusText = document.getElementById("status");
+      const startBtn = document.getElementById("start-btn");
+
+      if (!urlInput) {
+        alert("Por favor pega la URL de tu modelo de Teachable Machine.");
+        return;
+      }
+
+      // Asegurar que la URL termine en '/'
+      const modelURL = urlInput.endsWith("/") ? urlInput : urlInput + "/";
+
+      try {
+        startBtn.disabled = true;
+        statusText.innerText = "Cargando modelo de Deep Learning...";
+
+        const modelJSON = modelURL + "model.json";
+        const metadataJSON = modelURL + "metadata.json";
+
+        // Cargar el modelo y metadata
+        model = await tmImage.load(modelJSON, metadataJSON);
+        maxPredictions = model.getTotalClasses();
+
+        statusText.innerText = "Accediendo a la cámara...";
+
+        // Configurar la cámara web
+        const flip = true; // si se invierte como espejo
+        webcam = new tmImage.Webcam(320, 240, flip);
+        await webcam.setup(); // solicitar permisos de cámara
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // Añadir elemento canvas de la cámara
+        const webcamContainer = document.getElementById("webcam-container");
+        webcamContainer.innerHTML = "";
+        webcamContainer.appendChild(webcam.canvas);
+
+        // Inicializar contenedor de predicciones
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+        for (let i = 0; i < maxPredictions; i++) {
+          const div = document.createElement("div");
+          div.className = "prediction-item";
+          div.innerHTML = `
+            <div class="label-row">
+              <span id="class-name-${i}">Clase ${i + 1}</span>
+              <span id="class-prob-${i}">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="bar-${i}" class="progress-bar-fill"></div>
+            </div>
+          `;
+          labelContainer.appendChild(div);
+        }
+
+        statusText.innerText = "✅ Modelo ejecutándose en tiempo real.";
+        isRunning = true;
+      } catch (error) {
+        console.error(error);
+        statusText.innerText = "❌ Error al cargar modelo o cámara. Revisa la URL y los permisos.";
+        startBtn.disabled = false;
+        alert("Error: Asegúrate de que el link de Teachable Machine sea válido y de haber concedido permisos a la cámara.");
+      }
+    }
+
+    async function loop() {
+      if (webcam && webcam.canvas) {
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
+      }
+    }
+
+    async function predict() {
+      // Realizar inferencia en el frame actual de la cámara
+      const prediction = await model.predict(webcam.canvas);
+      for (let i = 0; i < maxPredictions; i++) {
+        const className = prediction[i].className;
+        const probability = (prediction[i].probability * 100).toFixed(1);
+
+        const nameElem = document.getElementById(`class-name-${i}`);
+        const probElem = document.getElementById(`class-prob-${i}`);
+        const barElem = document.getElementById(`bar-${i}`);
+
+        if (nameElem && probElem && barElem) {
+          nameElem.innerText = className;
+          probElem.innerText = `${probability}%`;
+          barElem.style.width = `${probability}%`;
+
+          // Resaltar visualmente si la probabilidad es mayor a 80%
+          if (prediction[i].probability > 0.8) {
+            barElem.style.backgroundColor = "var(--success)";
+          } else {
+            barElem.style.backgroundColor = "var(--primary)";
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
